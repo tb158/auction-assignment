@@ -4,6 +4,7 @@ def get_js():
     let selectedRows = new Set();
     let selectedCols = new Set();
     let sum = 0;
+    let originalColors = new Map();
 
     function resetAssignment() {
         sum = 0;
@@ -11,7 +12,7 @@ def get_js():
         selectedCols.clear();
         document.querySelectorAll('td').forEach(cell => {
             if (cell.style.backgroundColor === 'orange') {
-                cell.style.backgroundColor = '';
+                cell.style.backgroundColor = originalColors.get(cell);
             }
         });
         document.getElementById('sum-display').innerText = '割当合計: ' + sum;
@@ -27,8 +28,8 @@ def get_js():
             }
             if (selectedCols.has(j)) {
                 selectedCols.delete(j);
-            }  
-            cell.style.backgroundColor = '';
+            }
+            cell.style.backgroundColor = originalColors.get(cell);
             sum -= value;
         } else {
             if (selectedRows.has(i) || selectedCols.has(j)) {
@@ -36,6 +37,7 @@ def get_js():
             }
             selectedRows.add(i);
             selectedCols.add(j);
+            originalColors.set(cell, cell.style.backgroundColor);
             cell.style.backgroundColor = 'orange';
             sum += value;
         }

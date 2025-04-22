@@ -255,6 +255,8 @@ def main():
                                 html_table += f"<td style='{cell_style}'>{cell}</td>"
                             else:
                                 # square_matrixの値をdata属性に設定
+                                if cell == 0:
+                                    cell_style = "background-color: #ffffe0;"
                                 html_table += f"<td style='{cell_style}' data-value='{square_matrix[i-1][j-1]}' onclick='toggleCellColor(this, {i-1}, {j-1})'>{cell}</td>"
                     html_table += "</tr>"
                 html_table += f"""
@@ -283,7 +285,7 @@ def main():
             except ValueError:
                 error_message = "長方形の整数のみの行列を入力してください (空は0に変換するので許容)"
             except MatrixDimensionError:
-                error_message = "行または列の複製後に正方形行列になるようにしてください"
+                error_message = "行または列の複製後に正方形行列になるようにしてください (行複製係数の和と列複製係数の和を一致させてください)"
 
     # エラーメッセージを表示
     if error_message:
