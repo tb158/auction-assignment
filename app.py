@@ -63,6 +63,53 @@ def expand_names_and_priorities(names_text, priorities, replication_factors):
         expanded_priorities.extend([priority] * factor)
     return expanded_names, expanded_priorities
 
+def create_display_html_table_content(display_rows, display_cols, assignment_matrix, display_column_names, display_column_priorities, display_row_names, display_row_priorities, display_matrix):
+    # HTMLテーブルの中身部分
+    html_table = ""
+    for i in range(display_rows):
+        html_table += "<tr>"
+        for j in range(display_cols):
+            I = i-1
+            J = j-1
+            
+            if i == 0 and j == 0:
+                # 左上のセルに特定のクラスを追加
+                html_table += f"<td class='top-left-cell'></td>"
+            elif i == 0 and j == display_cols - 1:
+                # 右上のセルに特定のクラスを追加
+                html_table += f"<td class='top-right-cell'></td>"
+            elif i == display_rows - 1 and j == display_cols - 1:
+                # 右下のセルに特定のクラスを追加
+                html_table += f"<td class='bottom-right-cell'></td>"
+            elif i == display_rows - 1 and j == 0:
+                # 左下のセルに特定のクラスを追加
+                html_table += f"<td class='bottom-left-cell'></td>"
+            else:
+                if i == 0:
+                    # 列名を薄い青色にし、列名は縦書きで上から下に表示する
+                    cell_style = "writing-mode: vertical-lr;"
+                    html_table += f"<th><span style='{cell_style}'>{display_column_names[J]}</span></th>"
+                elif j == 0:
+                    # 行名を薄い青色にする
+                    cell_style = "background-color: #d3f9f9;"
+                    html_table += f"<th><span style='{cell_style}'>{display_row_names[I]}</span></th>"
+                elif i == display_rows - 1:
+                    # 優先順位を薄緑色にする
+                    cell_style = "background-color: #ccffcc;"
+                    html_table += f"<td style='{cell_style}'>{display_column_priorities[J]}</td>"
+                elif j == display_cols - 1:
+                    # 優先順位を薄緑色にする
+                    cell_style = "background-color: #ccffcc;"
+                    html_table += f"<td style='{cell_style}'>{display_row_priorities[I]}</td>"
+                else:
+                    # display_matrixの値をdata属性に設定
+                    cell_style = ""
+                    if assignment_matrix[I][J] == 0:
+                        # 割り当てるべきセルは黄色にする
+                        cell_style = "background-color: #ffffe0;"
+                    html_table += f"<td style='{cell_style}' data-value='{display_matrix[I][J]}' onclick='toggleCellColor(this, {I}, {J})'>{display_matrix[I][J]}</td>"
+    return html_table
+                    
 def main():
     st.title("割当計算機")
 
@@ -199,12 +246,11 @@ def main():
 
                 # square_matrixを作成
                 square_matrix = create_square_matrix(numeric_matrix, row_replication_factors, column_replication_factors)
+                # 辺
+                one_side = len(square_matrix)
                 
                 # 割当
                 assignment_matrix, total_assignment = assignment.assign(square_matrix, expanded_row_priorities, expanded_column_priorities, priority_flg, matrix_type)
-
-                # 割当結果の行列の辺のセル数
-                one_side = len(assignment_matrix)
 
                 # 新しい行列を作成
                 edited_assignment_matrix = [[''] * (one_side + 2) for _ in range(one_side + 2)]
@@ -229,47 +275,21 @@ def main():
                 # 列優先順位を下に追加
                 for j, priority in enumerate(expanded_column_priorities):
                     edited_assignment_matrix[one_side + 1][j + 1] = str(priority)
-
+                    
                 # HTMLテーブルを作成
                 html_table = f"""
                 <div class='center-table'>
                     <div class='table-container'>
                         <table class='no-border-table'>
                 """
-                for i, row in enumerate(edited_assignment_matrix):
-                    html_table += "<tr>"
-                    for j, cell in enumerate(row):
-                        cell_style = ""
-                        if i == 0 and j == 0:
-                            # 左上のセルに特定のクラスを追加
-                            html_table += f"<td class='top-left-cell' style='{cell_style}'>{cell}</td>"
-                        elif i == 0 and j == one_side + 1:
-                            # 右上のセルに特定のクラスを追加
-                            html_table += f"<td class='top-right-cell' style='{cell_style}'>{cell}</td>"
-                        elif i == one_side + 1 and j == one_side + 1:
-                            # 右下のセルに特定のクラスを追加
-                            html_table += f"<td class='bottom-right-cell' style='{cell_style}'>{cell}</td>"
-                        elif i == one_side + 1 and j == 0:
-                            # 左下のセルに特定のクラスを追加
-                            html_table += f"<td class='bottom-left-cell' style='{cell_style}'>{cell}</td>"
-                        else:
-                            if i == 0:
-                                # 列名を薄い青色にし、列名は縦書きで上から下に表示する
-                                cell_style = "writing-mode: vertical-lr;"
-                                html_table += f"<th><span style='{cell_style}'>{cell}</span></th>"
-                            elif j == 0:
-                                # 行名を薄い青色にする
-                                html_table += f"<th><span>{cell}</span></th>"
-                            elif i == one_side + 1 or j == one_side + 1:
-                                # 優先順位を薄緑色にする
-                                cell_style = "background-color: #ccffcc;"
-                                html_table += f"<td style='{cell_style}'>{cell}</td>"
-                            else:
-                                # square_matrixの値をdata属性に設定
-                                if cell == 0:
-                                    cell_style = "background-color: #ffffe0;"
-                                html_table += f"<td style='{cell_style}' data-value='{square_matrix[i-1][j-1]}' onclick='toggleCellColor(this, {i-1}, {j-1})'>{cell}</td>"
-                    html_table += "</tr>"
+
+                if True:
+                    # デフォルト表示
+                    display_rows = one_side + 2
+                    display_cols = one_side + 2
+                    html_table += create_display_html_table_content(display_rows, display_cols, assignment_matrix, expanded_column_names, expanded_column_priorities, expanded_row_names, expanded_row_priorities, square_matrix)
+                    
+                html_table += "</tr>"
                 html_table += f"""
                         </table>
                         <div class='vertical-label'>行優先順位</div>

@@ -39,6 +39,12 @@ def decisionPriority(cost_matrix, col_priority, row_priority, priority_flag):
         # 行優先順位も同じならどの行から割り当てるか乱数で決める
         # 割り当てられるものがなくなったら直前の割当を取り消して変更する
         # 優先順位が同じ他の列の割当を妨害してしまった場合も取り消す(ロジック考え中)
+        
+        # 上記じゃロジック不十分(列優先順位が同じ列が複数ある時に、割り当ての順番が不適当なせいで同じ優先順位内の割り当ての合計値が低くなったり
+        #                    割り当ての合計値が最大値になる割り当て方が複数ある時に、特定の割当を選ばないと、より優先順位の低いもの同士の
+        #                    割当で優先順位の高い列が損してしまうケースが考えられる)
+        
+        #
 
         sorted_col_indices = sorted(range(len(col_priority)), key=lambda x: col_priority[x])
         for j in sorted_col_indices:
