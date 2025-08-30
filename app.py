@@ -67,13 +67,22 @@ def main():
     st.title("割当計算機")
 
     # 列名の入力用テキストエリア
-    column_names_text = st.text_area("タブorスペースor改行区切りで各列の列名を貼り付けてください(任意)", height=68)
-    
+    column_names_text = st.text_area(
+        "タブorスペースor改行区切りで各列の列名を貼り付けてください(任意)", 
+        height=68,
+        placeholder="アライ オリベ モモ コジカ マルベリー"
+    )    
     # 行名の入力用のテキストエリア
-    row_names_text = st.text_area("タブorスペースor改行区切りで各行の行名を貼り付けてください(任意)", height=68)
+    row_names_text = st.text_area(
+        "タブorスペースor改行区切りで各行の行名を貼り付けてください(任意)", 
+        height=68,
+        placeholder="狼\r\n狂\r\n守\r\n占\r\n霊"
+    )
    
     # テキストエリアでデータを入力
-    input_text = st.text_area("TVS形式の行列を貼り付けてください")
+    input_text = st.text_area("TVS形式の行列を貼り付けてください",
+                              placeholder="10 20 30 40 50\r\n10 20 30 40 50\r\n10 20 30 40 50\r\n10 20 30 40 50\r\n10 20 30 40 50"
+                              )
         
     # エラーメッセージ
     error_message = ""
@@ -151,6 +160,8 @@ def main():
         )
 
         if st.button("割当", use_container_width=True):
+
+            st.markdown("<div style='text-align: center; font-size: 16px; margin: 10px 0;'>黄色のマスを割り当てていけば最適割当となります。</div>", unsafe_allow_html=True)
 
             # new_matrixをdfから設定
             new_matrix = edited_df.values.tolist()
