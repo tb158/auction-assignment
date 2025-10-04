@@ -1,25 +1,36 @@
 def get_html_style(cell_size):
     return f"""
     <style>
+    /* ダークモードでも読めるように、埋め込み側で白背景・黒文字を基調にする */
+    html, body {{
+        background: #ffffff !important;
+        color: #000000 !important;
+    }}
     .center-table {{
         display: flex;
         flex-direction: column;
         align-items: center;
         margin-top: 20px;
+        background: #ffffff !important;
+        color: #000000 !important;
     }}
     .table-container {{
         display: flex;
         align-items: center;
+        background: #ffffff !important;
+        color: #000000 !important;
     }}
     .vertical-label {{
         writing-mode: vertical-rl;
         text-orientation: upright;
         margin-left: 10px;
         font-weight: bold;
+        color: #000000 !important;
     }}
     .horizontal-label {{
         text-align: center; 
         font-weight: bold; 
+        color: #000000 !important;
     }}
     .no-border-table, .no-border-table tr {{
         border: none;
@@ -27,6 +38,8 @@ def get_html_style(cell_size):
     table {{
         border-collapse: collapse;
         table-layout: fixed;
+        background: #ffffff; /* デフォルト白（インライン指定があればそちら優先） */
+        color: #000000;
     }}
     th {{
         max-width: 160px;  /* 最大幅を80pxに設定 */
