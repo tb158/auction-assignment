@@ -2,5 +2,4 @@ numpy==2.2.4
 pandas==2.2.3
 streamlit==1.44.1
 munkres==1.1.4
-ortools==9.14.6206
-protobuf==6.31.1
+ortools==9.12.4544
