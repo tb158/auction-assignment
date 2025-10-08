@@ -2,9 +2,7 @@ import numpy as np
 import random
 import ExtendedMunkres
 from munkres import make_cost_matrix
-from constraint import Problem, AllDifferentConstraint
 from ortools.sat.python import cp_model
-from typing import List, Tuple, Dict
 
 def assign(original_matrix, row_priorities, col_priorities, priority_flag, matrix_type):
     """
