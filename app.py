@@ -191,11 +191,12 @@ def parse_input_matrix(input_text):
     matrix = [re.split(r'\s', line) for line in lines]
     return matrix
 
-def calculate_priority_ranking(values):
-    # 値の合計を計算
-    sums = np.sum(values, axis=0)
+def calculate_priority_ranking(numeric_matrix, matrix_type):
+    # 各行の合計を計算
+    sums = [sum(row) for row in numeric_matrix]
     # ランキングを計算
-    ranks = pd.Series(sums).rank(method='min', ascending=False).astype(int)
+    # コスト行列ならTrue(小さいほど順位が高い)、利益行列ならFalse(大きいほど順位が高い)
+    ranks = pd.Series(sums).rank(method='min', ascending=not matrix_type).astype(int)
     return ranks.tolist()
 
 
@@ -290,7 +291,7 @@ def set_test_data():
     # テスト用の行名データ
     test_row_names = "狼\n狂\n守\n占\n霊\n村"
     
-    # セッション状態に設定
+    # セッション状態に設定　※割当ボタンを押してもテストデータを保持するため必要
     st.session_state.test_input_matrix = test_matrix
     st.session_state.test_column_names = test_column_names
     st.session_state.test_row_names = test_row_names
@@ -298,6 +299,10 @@ def set_test_data():
 
 def main():
     st.title("割当計算機")
+    
+    # セッション状態の初期化
+    if 'assignment_count' not in st.session_state:
+        st.session_state.assignment_count = 0
     
     # テスト用のボタンを追加
     if st.button("テストデータを入力", help="※テスト用"):
@@ -334,6 +339,15 @@ def main():
                               placeholder="10 20 30 40 50\r\n10 20 30 40 50\r\n10 20 30 40 50\r\n10 20 30 40 50\r\n10 20 30 40 50"
                               )
     
+    # 行列の種類を選択（0: コスト行列, 1: 利益行列）
+    matrix_type = st.radio(
+        label="0: コスト行列, 1: 利益行列",
+        options=[0, 1],
+        format_func=lambda x: "利益行列" if x == 1 else "コスト行列",
+        index=1,
+        horizontal=True,
+        label_visibility="collapsed"
+    )
         
     # エラーメッセージ
     error_message = ""
@@ -349,12 +363,13 @@ def main():
         try:
             # 空文字列を0に変換して数値に変換
             numeric_matrix = np.array([[cell if cell != '' else 0 for cell in row] for row in matrix], dtype=int)
-
-            # 列優先順位を計算
-            column_priorities = calculate_priority_ranking(numeric_matrix)
+            # ※コスト行列には正方行列にしてから変換する→割り当て時にassignment.pyで変換すれば十分
 
             # 行優先順位を計算
-            row_priorities = calculate_priority_ranking(numeric_matrix.T)
+            row_priorities = calculate_priority_ranking(numeric_matrix, matrix_type)
+
+            # 列優先順位を計算
+            column_priorities = calculate_priority_ranking(numeric_matrix.T, matrix_type)
 
         except ValueError as e:
             # 数値に変換できない場合や他のエラーの場合はエラーメッセージを設定
@@ -414,26 +429,19 @@ def main():
             width=None,
             row_height=20
         )
-        # 行列の種類を選択（0: コスト行列, 1: 利益行列）
-        matrix_type = st.radio(
-            label="",
+
+        # 優先順位の種類を選択（0: 行優先, 1: 列優先）
+        priority_flg = st.radio(
+            "優先順位が行も列も等しい最適割当が存在する場合にどちらを優先するか",
             options=[0, 1],
-            format_func=lambda x: "利益行列" if x == 1 else "コスト行列",
+            format_func=lambda x: "行優先" if x == 0 else "列優先",
             index=1,
             horizontal=True
         )
 
-        # # 優先順位の種類を選択（0: 行優先, 1: 列優先）
-        # priority_flg = st.radio(
-        #     "優先順位が行も列も等しい最適割当が存在する場合にどちらを優先するか",
-        #     options=[0, 1],
-        #     format_func=lambda x: "行優先" if x == 0 else "列優先",
-        #     index=1,
-        #     horizontal=True
-        # )
-        priority_flg = 1
-
         if st.button("割当", use_container_width=True):
+            # 割当ボタンが押された回数をカウント
+            st.session_state.assignment_count += 1
 
             st.markdown("<div style='text-align: center; font-size: 16px; margin: 10px 0;'>黄色のマスを割り当てていけば最適割当となります。</div>", unsafe_allow_html=True)
 
@@ -497,22 +505,12 @@ def main():
                 # square_matrix_info.show_all_members()
                 
                 # 割当
-                assignment_matrix, total_assignment = assignment.assign(square_matrix, square_matrix_info.row_priorities, square_matrix_info.column_priorities, priority_flg, matrix_type)
+                assignment_matrix, total_assignment, assignments = assignment.assign(square_matrix, square_matrix_info.row_priorities, square_matrix_info.column_priorities, priority_flg, matrix_type)
 
-                    
 
-                # ラジオボタンで表示モードを選択
-                #display_mode = st.radio("表示モード:", ["正方表示", "行を折りたたむ", "列を折りたたむ"], index=0, label_visibility="hidden")
-                # htmlのラジオボタンをテーブルの右に配置する予定
-                # display_mode = "正方表示"
-                # if display_mode == "正方表示":
-                #     html_table += create_display_html_table_content(one_side, one_side, assignment_matrix, expanded_column_names, expanded_column_priorities, expanded_row_names, expanded_row_priorities, square_matrix)
-                # elif display_mode == "行を折りたたむ":
-                #     #以下実装中
-                #     # fold_lists()
-                #     # html_table += create_display_html_table_content(numeric_matrix.length, one_side, assignment_matrix, expanded_column_names, expanded_column_priorities, folded_row_names, expanded_row_priorities, square_matrix)
-                # elif display_mode == "列を折りたたむ":
-                #     html_table += create_display_html_table_content(one_side, numeric_matrix[0].length, assignment_matrix, folded_column_names, expanded_column_priorities, expanded_row_names, expanded_row_priorities, square_matrix)
+                # 最適割当実装予定
+                # 最適割り当て時にオレンジをリセットする処理を入れる必要が多分ある(streamlitの再レンダリングによってオレンジ色が引き継がれている？) 
+                
                 
                 html_table_square = create_display_html_table_content(square_matrix_info, "square", assignment_matrix)
                 html_table_row_fold = create_display_html_table_content(column_expanded_matrix_info, "row-fold")
@@ -520,10 +518,15 @@ def main():
                 
 
                 # 右側にHTMLラジオを配置し、表示を切り替え
+                # assignmentsをJSON文字列に変換
+                import json
+                assignments_json = json.dumps(assignments)
+                
+                # 割当回数をhtmlにセットすることで割当ボタンを押すたびにhtmlが変化して初期表示が走るようになる
                 html_table_with_radio = f"""
                 <div style='display:flex; gap:16px; align-items:flex-start; justify-content:flex-start; flex-wrap: nowrap;'>
                   <div style='flex:1 1 auto; min-width:0; overflow:auto;'>
-                    <div id='tbl_square'>{html_table_square}
+                    <div id='tbl_square' data-assignments='{assignments_json}' data-assignment-count='{st.session_state.assignment_count}'>{html_table_square}
                         <button onclick="resetAssignment()" style="display: block; margin: 10px auto;">割当リセット</button>
                     </div>
                     <div id='tbl_fold_rows' style='display:none;'>{html_table_row_fold}
@@ -570,14 +573,22 @@ def main():
     <div style='margin-top: 600px;'>
         <h2>使い方</h2>
         <ul>
-            <li>ハンガリアンアルゴリズムによる割当を計算します。</li>
+            <li>ハンガリアンアルゴリズムとバックトラックによって割当を計算します。</li>
+            <li>コスト行列の場合はコストを最小化し、利益行列の場合は利益を最大化します。</li>
             <li>下記の入力イメージを参考に、エクセルやスプレッドシートから行列をコピペしてください。</li>
             <li>複数係数を2以上に設定した場合は同じ行または列を直後に複製したものを計算します。</li>
-            <li>現在は優先順位は計算には使用せず、メモ用に表示しています。</li>
-            <li>優先順位の初期値は各行(または各列)の値の総和を順位化したものになっています。</li>
+            <li>優先順位の初期値は各行(または各列)の値の総和を順位化したものになっています。(コストなら小さいほど優先順位が高く、利益なら大きいほど優先順位が高い)</li>
             <li>優先順位と複製係数もエクセルやスプレッドシートからコピペで上書きできます。</li>
             <li>行を誤って追加した場合は選択してバックスペースで削除できます。</li>
-            <li>テストデータを入力ボタンを使用した場合は、実使用の前にブラウザ更新をかける必要があります</li>
+            <li>テストデータを入力ボタンを使用した場合は、実使用の前にブラウザ更新をかける必要があります。</li>
+            <li>割当ボタンをもう一度押すことで自動割当に戻せます。</li>
+            <li>最適な割り当てが複数ある場合で、列優先の場合は、以下の規則で解を求めます。行優先の場合は行と列が逆になります。</li>
+            <ol>
+                <li>優先順位の高い列グループ順に、コスト(利益の反転)の合計が小さいものから割り当てる。</li>
+                <li>この段階で複数解存在する場合は、優先順位の高い行グループ順にコストの合計が小さいものから割り当てる。</li>
+                <li>この段階で複数解存在する場合は、ランダムに1つの解を選ぶ。</li>
+            </ol>
+            <li>「競売」ルール参考: <a href="https://note.com/wbo6_on/n/n52ea0801af4b" target="_blank">https://note.com/wbo6_on/n/n52ea0801af4b</a></li>
         </ul>
     </div>
     """, unsafe_allow_html=True)

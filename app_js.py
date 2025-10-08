@@ -16,7 +16,40 @@ def get_js():
     let selectedCols = new Set();
     let sum = 0;
     let originalColors = new Map();
-
+    let lastAssignmentCount = 0;
+    
+    // ページ読み込み完了後に初期割当を適用
+    applyInitialAssignments();
+    // document.addEventListener('DOMContentLoaded', applyInitialAssignments);
+    
+    // 初期割当の適用（割当ボタンが押されるたびに実行）
+    function applyInitialAssignments() {
+        const tblSquare = document.getElementById('tbl_square');
+        if (tblSquare && tblSquare.dataset.assignments) {
+            try {
+                
+                // まずオレンジ色をリセット
+                resetAssignment();
+                
+                const assignments = JSON.parse(tblSquare.dataset.assignments);
+                if (assignments && assignments.length > 0) {
+                    // 少し遅延させてDOMが完全に構築されるのを待つ
+                    setTimeout(function() {
+                        assignments.forEach(function(assignment) {
+                            if (assignment && assignment.length === 2) {
+                                toggleCellColor(assignment[0], assignment[1]);
+                            }
+                        });
+                    }, 100);
+                }
+                
+            } catch (e) {
+                console.error('Error parsing assignments:', e);
+            }
+        }
+    }
+    
+    // 割当リセット関数
     function resetAssignment() {
         sum = 0;
         selectedRows.clear();
