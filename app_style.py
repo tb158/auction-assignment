@@ -37,17 +37,36 @@ def get_html_style(cell_size):
     }}
     table {{
         border-collapse: collapse;
-        table-layout: fixed;
+        table-layout: auto;  /* fixedからautoに変更 */
+        width: max-content;  /* 内容に合わせて自動調整 */
         background: #ffffff; /* デフォルト白（インライン指定があればそちら優先） */
         color: #000000;
     }}
-    th {{
+     /* 割り当て結果セル専用のスタイル */
+     th[id*="row-assignment"] {{
+         height: {cell_size}px;
+         overflow: visible;    /* 内容をすべて表示 */
+         white-space: nowrap;  /* 改行を防ぐ */
+         border: 1px solid #000;
+         text-overflow: ellipsis;  /* 超過した部分を省略記号で表示 */
+         text-align: left !important;  /* 左づめに設定 */
+         padding-left: 4px;  /* 左側にパディングを追加 */
+     }}
+    /* 割り当て結果セル専用のスタイル */
+    th[id*="col-assignment"] {{
+        width: {cell_size}px;
+        white-space: normal;  /* 改行を許可 */
+        word-wrap: break-word; /* 長い単語を改行 */
+        overflow: visible;    /* 内容をすべて表示 */
+        border: 1px solid #000;
+    }}
+    /* 通常のヘッダーセル（列名・行名）のスタイル */
+    th:not([id*="assignment"]) {{
         max-width: 160px;  /* 最大幅を80pxに設定 */
         overflow: hidden;  /* 超過した部分を隠す */
         white-space: nowrap;  /* 改行を防ぐ */
         text-overflow: clip;  /* 超過した部分を切り取る */
         border: 1px solid #000;
-        background-color: #d3f9f9;
     }}
     td {{
         width: {cell_size}px;
@@ -69,33 +88,14 @@ def get_html_style(cell_size):
         text-orientation: upright;
         height: 100px;
     }}
-    /* 左上のセルのスタイルを変更 */
-    .no-border-table .top-left-cell {{
+    /* 四隅のセルのスタイルを変更 */
+    .no-border-table .corner-cell {{
         background-color: transparent;  /* 背景色を無しにする */
         contenteditable: false !important;
         border-top: none;
-        border-left: none;
-    }}
-    /* 右上のセルのスタイルを変更 */
-    .no-border-table .top-right-cell {{
-        background-color: transparent;  /* 背景色を無しにする */
-        contenteditable: false !important;
-        border-top: none;
-        border-right: none;
-    }}
-    /* 右下のセルのスタイルを変更 */
-    .no-border-table .bottom-right-cell {{
-        background-color: transparent;  /* 背景色を無しにする */
-        contenteditable: false !important;
-        border-right: none;
         border-bottom: none;
-    }}
-    /* 左下のセルのスタイルを変更 */
-    .no-border-table .bottom-left-cell {{
-        background-color: transparent;  /* 背景色を無しにする */
-        contenteditable: false !important;
+        border-right: none;
         border-left: none;
-        border-bottom: none;
     }}
     </style>
     """

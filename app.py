@@ -14,6 +14,10 @@ class MatrixDimensionError(Exception):
     """行と列の複製係数の和が一致しない場合に発生する例外"""
     pass
 
+class ReplicationFactorError(Exception):
+    """複製係数が1未満の場合に発生する例外"""
+    pass
+
 class ExpandableMatrixAndBackgrounds:
     """
     expand可能なマトリックスと背景情報を管理するクラス
@@ -31,11 +35,6 @@ class ExpandableMatrixAndBackgrounds:
         print(f"display_matrix: {self.display_matrix}")
         print(f"row_ids: {self.row_ids}")
         print(f"col_ids: {self.col_ids}")
-        # folded_row_names, folded_column_names などがあれば追加
-        if hasattr(self, "folded_row_names"):
-            print(f"folded_row_names: {self.folded_row_names}")
-        if hasattr(self, "folded_column_names"):
-            print(f"folded_column_names: {self.folded_column_names}")
         print("===============================================")
     """
     expand可能なマトリックスと背景情報を管理するクラス
@@ -46,7 +45,6 @@ class ExpandableMatrixAndBackgrounds:
         self.row_priorities = row_priorities
         self.column_priorities = column_priorities
         self.display_matrix = display_matrix
-        
         if row_ids is None:
             self.row_ids = [str(i) for i in range(len(display_matrix))]
         else:
@@ -69,9 +67,9 @@ class ExpandableMatrixAndBackgrounds:
         -------
         ExpandableMatrixAndBackgrounds
             行複製後の新しいインスタンス
-        """
+        # """
         # selfのメンバー変数に対して複製を行う
-        expanded_row_names, expanded_row_priorities, expanded_row_ids, self.folded_row_names = \
+        expanded_row_names, expanded_row_priorities, expanded_row_ids = \
             self.expand_names_and_priorities_and_ids(
                 self.row_names,
                 self.row_priorities,
@@ -104,7 +102,7 @@ class ExpandableMatrixAndBackgrounds:
             列複製後の新しいインスタンス
         """
         # selfのメンバー変数に対して複製を行う
-        expanded_column_names, expanded_column_priorities, expanded_column_ids, self.folded_column_names = \
+        expanded_column_names, expanded_column_priorities, expanded_column_ids = \
             self.expand_names_and_priorities_and_ids(
                 self.column_names,
                 self.column_priorities,
@@ -160,7 +158,6 @@ class ExpandableMatrixAndBackgrounds:
         # 行または列の複製
         expanded_names = []
         expanded_priorities = []
-        folded_names = []
         expanded_ids = []
         
         for i, (priority, factor) in enumerate(zip(priorities, replication_factors)):
@@ -170,13 +167,11 @@ class ExpandableMatrixAndBackgrounds:
                 name = ""
             if factor == 1:
                 expanded_names.append(name)
-                folded_names.append(name)
             else:
                 expanded_names.extend([f"{name}{j+1}" for j in range(factor)])
-                folded_names.append(name + " × " + str(factor))
             expanded_priorities.extend([priority] * factor)
             expanded_ids.extend([str(i) + "-" + str(j) for j in range(factor)])
-        return expanded_names, expanded_priorities, expanded_ids, folded_names
+        return expanded_names, expanded_priorities, expanded_ids
 
 def split_text_to_array(input_text):
     """
@@ -208,6 +203,7 @@ def create_display_html_table_content(
     
     display_rows = len(m.display_matrix) + 2
     display_cols = len(m.display_matrix[0]) + 2
+        
     # HTMLテーブルを作成
     html_table = f"""
     <div class='center-table'>
@@ -220,35 +216,58 @@ def create_display_html_table_content(
             I = i-1
             J = j-1
             
-            if i == 0 and j == 0:
-                # 左上のセルに特定のクラスを追加
-                html_table += f"<td class='top-left-cell'></td>"
-            elif i == 0 and j == display_cols - 1:
-                # 右上のセルに特定のクラスを追加
-                html_table += f"<td class='top-right-cell'></td>"
-            elif i == display_rows - 1 and j == display_cols - 1:
-                # 右下のセルに特定のクラスを追加
-                html_table += f"<td class='bottom-right-cell'></td>"
-            elif i == display_rows - 1 and j == 0:
-                # 左下のセルに特定のクラスを追加
-                html_table += f"<td class='bottom-left-cell'></td>"
+            if i == 0 and j == 0 or i == display_rows - 1 and j == display_cols - 1 or i == display_rows - 1 and j == 0 or i == 0 and j == display_cols - 1:
+                # 四隅のセルに特定のクラスを追加
+                html_table += f"<td class='corner-cell'></td>"
+            # 優先順位も割当結果も表示していたときはこうしていた
+            # elif (table_type == "row-fold" or table_type == "column-fold") and (i == 0 and j == display_cols - 2 or i == display_rows - 2 and j == 0 or 
+            #                                                                     i >= display_rows - 2 and j >= display_cols - 2):
+            #     # 四隅のセルに特定のクラスを追加
+            #     html_table += f"<td class='corner-cell'></td>"
             else:
                 if i == 0:
                     # 列名を薄い青色にし、列名は縦書きで上から下に表示する
                     cell_style = "writing-mode: vertical-lr;"
-                    html_table += f"<th><span style='{cell_style}'>{m.column_names[J]}</span></th>"
+                    if (table_type == "column-fold") and m.folded_column_replication_factors[J] > 1:
+                        column_name = m.column_names[J] + " × " + str(m.folded_column_replication_factors[J])
+                    else:
+                        column_name = m.column_names[J]
+                    html_table += f"<th id='col-name-{table_type}-{J} col_id='{m.col_ids[J]}' assignment_name='{m.column_names[J]}' style='background-color: #d3f9f9'><span style='{cell_style}'>{column_name}</span></th>"
                 elif j == 0:
                     # 行名を薄い青色にする
                     cell_style = "background-color: #d3f9f9;"
-                    html_table += f"<th><span style='{cell_style}'>{m.row_names[I]}</span></th>"
+                    if (table_type == "row-fold") and m.folded_row_replication_factors[I] > 1:
+                        row_name = m.row_names[I] + " × " + str(m.folded_row_replication_factors[I])
+                    else:
+                        row_name = m.row_names[I]
+                    html_table += f"<th id='row-name-{table_type}-{I}' row_id='{m.row_ids[I]}' assignment_name='{m.row_names[I]}' style='{cell_style}'><span>{row_name}</span></th>"
                 elif i == display_rows - 1:
-                    # 優先順位を薄緑色にする
-                    cell_style = "background-color: #ccffcc;"
-                    html_table += f"<td style='{cell_style}'>{m.column_priorities[J]}</td>"
+                    if table_type == "square":
+                        # 優先順位を薄緑色にする
+                        cell_style = "background-color: #ccffcc;"
+                        html_table += f"<td style='{cell_style}' col_id={m.col_ids[J]}>{m.column_priorities[J]}</td>"
+                    else:
+                        # 列割当結果
+                        cell_style = "writing-mode: vertical-lr;"
+                        html_table += f"<th id='col-assignment-{table_type}-{J}' col_id={m.col_ids[J]} style='background-color: #ccffcc;'><span style='{cell_style}'></span></th>"
                 elif j == display_cols - 1:
-                    # 優先順位を薄緑色にする
-                    cell_style = "background-color: #ccffcc;"
-                    html_table += f"<td style='{cell_style}'>{m.row_priorities[I]}</td>"
+                    if table_type == "square":
+                        # 優先順位を薄緑色にする
+                        cell_style = "background-color: #ccffcc;"
+                        html_table += f"<td style='{cell_style}' row_id={m.row_ids[I]}>{m.row_priorities[I]}</td>"
+                    else:
+                        # 行割当結果
+                        cell_style = "background-color: #ccffcc;"
+                        html_table += f"<th id='row-assignment-{table_type}-{I}' style='{cell_style}' row_id={m.row_ids[I]}></th>"
+                # 優先順位も割当結果も表示していたときはこうしていた
+                # elif (table_type == "row-fold" or table_type == "column-fold") and i == display_rows - 2:
+                #     # 薄灰色にし、縦書きで太字で上から下に割当結果を表示する
+                #     cell_style = "writing-mode: vertical-lr;"
+                #     html_table += f"<th id='col-assignment-{table_type}-{J}' col_id={m.col_ids[J]} style='background-color: #cccccc;'><span style='{cell_style}'></span></th>"
+                # elif (table_type == "row-fold" or table_type == "column-fold") and j == display_cols - 2:
+                #     # 薄灰色にし、太字で割当結果を表示する
+                #     cell_style = "background-color: #cccccc;"
+                #     html_table += f"<th id='row-assignment-{table_type}-{I}' style='{cell_style}' row_id={m.row_ids[I]}></th>"
                 else:
                     # display_matrixの値をdata属性に設定
                     cell_style = ""
@@ -261,12 +280,19 @@ def create_display_html_table_content(
                     else:
                         html_table += f"<td id = 'cell-{table_type}-{I}-{J}' row_id='{m.row_ids[I]}' col_id='{m.col_ids[J]}' style='{cell_style}' data-value='{m.display_matrix[I][J]}'>{m.display_matrix[I][J]}</td>"
         html_table += "</tr>"
-            
-    html_table += f"""
+    
+    if table_type == "square":
+        html_table += f"""
             </table>
             <div class='vertical-label'>行優先順位</div>
         </div>
         <div style='text-align: center; font-weight: bold; width: 100%;'>列優先順位</div>
+    </div>
+    """
+    else:
+        html_table += f"""
+            </table>
+        </div>
     </div>
     """
     
@@ -391,7 +417,6 @@ def main():
         # 元の行列を中央に配置
         for i in range(rows):
             for j in range(len(matrix[i])):
-                #new_matrix[i + 1][j + 1] = numeric_matrix[i][j]
                 new_matrix[i + 1][j + 1] = matrix[i][j]
 
         # 行複製係数を左に追加
@@ -439,10 +464,9 @@ def main():
         )
 
         if st.button("割当", use_container_width=True):
+            
             # 割当ボタンが押された回数をカウント
             st.session_state.assignment_count += 1
-
-            st.markdown("<div style='text-align: center; font-size: 16px; margin: 10px 0;'>黄色のマスを割り当てていけば最適割当となります。</div>", unsafe_allow_html=True)
 
             # new_matrixをdfから設定
             new_matrix = edited_df.values.tolist()
@@ -467,6 +491,11 @@ def main():
 
                 # 列複製係数
                 column_replication_factors = [int(new_matrix[0][j + 1]) for j in range(cols)]
+                
+                # 行複製係数と列複製係数のバリデーション
+                if any(factor < 1 for factor in row_replication_factors) or any(factor < 1 for factor in column_replication_factors):
+                    error_message = "複製係数は1以上の整数を入力してください"
+                    raise ReplicationFactorError
 
                 # 行優先順位
                 row_priorities = [int(new_matrix[i + 1][cols + 1]) for i in range(rows)]
@@ -482,9 +511,10 @@ def main():
                 # 列複製
                 column_expanded_matrix_info = original_matrix_info.column_expanded(column_replication_factors)
                 
-                # folded_namesを格納
-                row_expanded_matrix_info.column_names = original_matrix_info.folded_column_names
-                column_expanded_matrix_info.row_names = original_matrix_info.folded_row_names
+                # 折り畳み後の行名のために折りたたまれている複製係数を格納
+                row_expanded_matrix_info.folded_column_replication_factors = column_replication_factors
+                column_expanded_matrix_info.folded_row_replication_factors = row_replication_factors
+                
                 # 正方行列を作成しmatrix_infoに
                 square_matrix = original_matrix_info.create_square_matrix(numeric_matrix, row_replication_factors, column_replication_factors)
                 square_matrix_info = ExpandableMatrixAndBackgrounds(
@@ -505,16 +535,13 @@ def main():
                 
                 # 割当
                 assignment_matrix, total_assignment, assignments = assignment.assign(square_matrix, square_matrix_info.row_priorities, square_matrix_info.column_priorities, priority_flg, matrix_type)
-
-
-                # 最適割当実装予定
-                # 最適割り当て時にオレンジをリセットする処理を入れる必要が多分ある(streamlitの再レンダリングによってオレンジ色が引き継がれている？) 
-                
                 
                 html_table_square = create_display_html_table_content(square_matrix_info, "square", assignment_matrix)
                 html_table_row_fold = create_display_html_table_content(column_expanded_matrix_info, "row-fold")
                 html_table_column_fold = create_display_html_table_content(row_expanded_matrix_info, "column-fold")
-                
+
+                # エラー発生時飛ばしたいのでtry文の中
+                st.markdown("<div style='text-align: center; font-size: 16px; margin: 10px 0;'>黄色のマスを割り当てていけば最適割当となります。</div>", unsafe_allow_html=True)
 
                 # 右側にHTMLラジオを配置し、表示を切り替え
                 # assignmentsをJSON文字列に変換
@@ -526,13 +553,10 @@ def main():
                 <div style='display:flex; gap:16px; align-items:flex-start; justify-content:flex-start; flex-wrap: nowrap;'>
                   <div style='flex:1 1 auto; min-width:0; overflow:auto;'>
                     <div id='tbl_square' data-assignments='{assignments_json}' data-assignment-count='{st.session_state.assignment_count}'>{html_table_square}
-                        <button onclick="resetAssignment()" style="display: block; margin: 10px auto;">割当リセット</button>
                     </div>
                     <div id='tbl_fold_rows' style='display:none;'>{html_table_row_fold}
-                        <button onclick="resetAssignment()" style="display: block; margin: 10px auto;" disabled>割当リセット</button>
                     </div>
                     <div id='tbl_fold_cols' style='display:none;'>{html_table_column_fold}
-                        <button onclick="resetAssignment()" style="display: block; margin: 10px auto;" disabled>割当リセット</button>
                     </div>
                   </div>
                   <div style='width:220px; flex:0 0 220px;'>
@@ -543,9 +567,13 @@ def main():
                 </div>
                 """
                 
-                html_table_tail = f"""<div style="display: flex; justify-content: center; text-align: center; margin-top: 20px; margin-right: 220px;">
-                    <div id='sum-display' style="margin-right: 10px;">割当合計: 0</div>
-                    <div>最適割当合計: {total_assignment}</div>
+                # html_table_tail = f"""<div style="display: flex; justify-content: center; text-align: center; margin-top: 20px; margin-right: 220px;">
+                html_table_tail = f"""<div style="display: flex; flex-direction: column; align-items: center; margin-top: 20px; margin-right: 220px;">
+                    <div style="display: flex; justify-content: center; text-align: center; margin-bottom: 10px;">
+                        <div id='sum-display' style="margin-right: 10px;">割当合計: 0</div>
+                        <div>最適割当合計: {total_assignment}</div>
+                    </div>
+                    <button onclick="resetAssignment()" style="display: block; margin: 10px auto;">割当リセット</button>
                 </div>
                 """
 
@@ -561,6 +589,8 @@ def main():
 
             except ValueError:
                 error_message = "長方形の整数のみの行列を入力してください (空は0に変換するので許容)"
+            except ReplicationFactorError:
+                error_message = "複製係数は1以上の整数を入力してください"
             except MatrixDimensionError:
                 error_message = "行または列の複製後に正方形行列になるようにしてください (行複製係数の和と列複製係数の和を一致させてください)"
 
@@ -568,6 +598,7 @@ def main():
     if error_message:
         st.markdown(f"<div style='color: red; text-align: center;'>{error_message}</div>", unsafe_allow_html=True)
 
+    # エラーが起きていても表示する
     st.markdown("""
     <div style='margin-top: 600px;'>
         <h2>使い方</h2>
